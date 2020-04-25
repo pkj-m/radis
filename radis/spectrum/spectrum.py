@@ -699,13 +699,16 @@ class Spectrum(object):
             I = I.copy()
 
         # Get wavespace (in correct unit, and correct medium)
+        medium = "air"
+        if wunit[-4:] == "_vac":
+            medium = "vacuum"
+            wunit = wunit[:-4]
+
         wunit = cast_waveunit(wunit)
-        if wunit == "cm-1":
+        if u.Unit(wunit).is_equivalent(1 / u.cm):
             w = self.get_wavenumber(vartype, copy=copy)
-        elif wunit == "nm":
-            w = self.get_wavelength(medium="air", which=vartype, copy=copy)
-        elif wunit == "nm_vac":
-            w = self.get_wavelength(medium="vacuum", which=vartype, copy=copy)
+        elif u.Unit(wunit).is_equivalent(u.nm):
+            w = self.get_wavelength(medium=medium, which=vartype, copy=copy)
         else:
             raise ValueError(wunit)
 
