@@ -707,12 +707,12 @@ class Spectrum(object):
 
         # return wavenumber
         if u.Unit(wunit).is_equivalent(1 / u.cm):
-            w = self.get_wavenumber(vartype, copy=copy)
-            w = convert_and_strip_units(w * (1 / u.cm), u.Unit(wunit))
+            w = self.get_wavenumber(vartype, wunit=wunit, copy=copy)
         # return wavelength
         elif u.Unit(wunit).is_equivalent(u.nm):
-            w = self.get_wavelength(medium=medium, which=vartype, copy=copy)
-            w = convert_and_strip_units(w * u.nm, u.Unit(wunit))
+            w = self.get_wavelength(
+                medium=medium, which=vartype, wunit=wunit, copy=copy
+            )
         else:
             raise ValueError(wunit)
 
@@ -822,7 +822,7 @@ class Spectrum(object):
 
         return w
 
-    def get_wavelength(self, medium="air", which="any", copy=True):
+    def get_wavelength(self, medium="air", which="any", wunit="nm", copy=True):
         """ Return wavelength in defined medium 
 
 
@@ -866,31 +866,28 @@ class Spectrum(object):
         w = self._get_wavespace(which=which, copy=copy)
         if self.get_waveunit() == "cm-1":
             w = cm2nm(w)  # vacuum wavelength
-
             # Correct for propagation medium (air, vacuum)
             if medium == "air":
                 w = vacuum2air(w)
             else:  # medium == 'vacuum'
                 pass  # no change needed
-
         elif self.get_waveunit() == "nm":  # nm air
             if medium == "air":
                 pass  # no change needed
             else:
                 w = air2vacuum(w)
-
         elif self.get_waveunit() == "nm_vac":  # nm vacuum
             if medium == "air":
                 w = vacuum2air(w)
             else:
                 pass  # no change needed
-
         else:
             raise ValueError(self.get_waveunit())
 
+        w = convert_and_strip_units(w * w.nm, u.Unit(wunit))
         return w
 
-    def get_wavenumber(self, which="any", copy=True):
+    def get_wavenumber(self, which="any", wunit="cm-1", copy=True):
         """ Return wavenumber (if the same for all quantities)
 
 
@@ -932,6 +929,7 @@ class Spectrum(object):
         else:
             raise ValueError(self.get_waveunit())
 
+        w = convert_and_strip_units(w * (1 / u.cm), u.Unit(wunit))
         return w
 
     def get_radiance(self, Iunit="mW/cm2/sr/nm", copy=True):
