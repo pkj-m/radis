@@ -48,6 +48,7 @@ from publib import set_style, fix_style
 from radis.phys.convert import conv2, cm2nm, nm2cm
 from radis.phys.units import Unit, convert_universal
 from radis.phys.air import vacuum2air, air2vacuum
+from radis.phys.units_astropy import convert_and_strip_units
 from radis.spectrum.utils import (
     CONVOLUTED_QUANTITIES,
     NON_CONVOLUTED_QUANTITIES,
@@ -704,11 +705,14 @@ class Spectrum(object):
             medium = "vacuum"
             wunit = wunit[:-4]
 
-        wunit = cast_waveunit(wunit)
+        # return wavenumber
         if u.Unit(wunit).is_equivalent(1 / u.cm):
             w = self.get_wavenumber(vartype, copy=copy)
+            w = convert_and_strip_units(w * (1 / u.cm), u.Unit(wunit))
+        # return wavelength
         elif u.Unit(wunit).is_equivalent(u.nm):
             w = self.get_wavelength(medium=medium, which=vartype, copy=copy)
+            w = convert_and_strip_units(w * u.nm, u.Unit(wunit))
         else:
             raise ValueError(wunit)
 

@@ -39,6 +39,14 @@ def convert_and_strip_units(quantity, output_unit=None, digit=10):
         Raised when ``quantity`` is a astropy.units quantity and ``output_unit`` is ``None``.
     
     """
+    is_iterable = False
+    try:
+        for x in quantity:
+            is_iterable = True
+            break
+    except:
+        pass
+
     if isinstance(quantity, u.Quantity):
         if output_unit in (u.deg_C, u.imperial.deg_F, u.K):
             quantity = quantity.to_value(output_unit, equivalencies=u.temperature())
@@ -51,7 +59,7 @@ def convert_and_strip_units(quantity, output_unit=None, digit=10):
                 )
             )
 
-        if digit:
+        if not is_iterable and digit:
             quantity = round(quantity, digit)
 
     return quantity
