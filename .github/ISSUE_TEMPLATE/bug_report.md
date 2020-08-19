@@ -1,7 +1,14 @@
-<!--- Provide a general summary of the issue in the Title above -->
+---
+name: Bug report
+about: Create a bug report to help us improve
+title: ''
+labels: bug
+assignees: ''
 
-### 🐛 Describe the issue
-<!--- A clear and concise description of the issue (current, unexpected behavior) -->
+---
+
+### 🐛 Describe the bug
+<!--- A clear and concise description of the bug (or unexpected behavior) -->
 
 ### 🖥 Steps To Reproduce
 <!--- Steps or code snippet to reproduce the behavior.-->
@@ -12,15 +19,4 @@
 
 ### 💡 Possible solutions
 <!--- Not obligatory, but suggest an idea for implementing addition or change -->
-
-
-
-
-
-
-
----
-<sub>*Tip : you can vote for [New Features](https://github.com/radis/radis/issues/79) on https://feathub.com/radis/radis*
-*Also check for the [Long Term Todo List](https://github.com/radis/radis/issues/53)* 
-</sub>
 

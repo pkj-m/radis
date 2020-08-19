@@ -1701,9 +1701,9 @@ class BaseFactory(DatabankLoader):
                 if id not in [2]:  # CO2
                     raise NotImplementedError
                 # normally we should find whether the rovibrational level is symmetric
-                # or asymmetric. Here we just assume it's symmetric, because
-                # CO2 asymmetric levels dont exist (gs=0) and they should not be
-                # in the line database.
+                # or asymmetric. Here we just assume it's symmetric, because for
+                # symmetric isotopes such as CO2(626), CO2 asymmetric levels
+                # dont exist (gs=0) and they should not be in the line database.
                 _gs = _gs[0]
 
             dg = df.loc[idx]

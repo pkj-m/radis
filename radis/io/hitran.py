@@ -26,14 +26,14 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 import sys
 import pandas as pd
 from collections import OrderedDict
-from os.path import exists, splitext
+from os.path import exists
 import radis
 from radis.io.tools import (
     parse_hitran_file,
     drop_object_format_columns,
     replace_PQR_with_m101,
 )
-from radis.misc.cache_files import load_h5_cache_file, save_to_hdf
+from radis.misc.cache_files import load_h5_cache_file, save_to_hdf, cache_file_name
 from os.path import getmtime
 
 # from radis.test.utils import getTestFile
@@ -195,7 +195,7 @@ HITRAN_MOLECULES = list(trans.values())
 
 # %% Parsing functions
 
-# General case
+# General case : HITRAN 2004
 columns_2004 = OrderedDict(
     [
         (
@@ -250,7 +250,7 @@ columns_2004 = OrderedDict(
         ("gpp", ("a7", float, "lower state degeneracy", "")),
     ]
 )
-""" OrderedDict: parsing order of HITRAN """
+""" OrderedDict: parsing order of HITRAN 2004 format """
 
 
 def hit2df(fname, count=-1, cache=False, verbose=True, drop_non_numeric=True):
@@ -319,7 +319,7 @@ def hit2df(fname, count=-1, cache=False, verbose=True, drop_non_numeric=True):
     columns = columns_2004
 
     # Use cache file if possible
-    fcache = splitext(fname)[0] + ".h5"
+    fcache = cache_file_name(fname)
     if cache and exists(fcache):
         df = load_h5_cache_file(
             fcache,

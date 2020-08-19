@@ -73,6 +73,7 @@ from radis.io.hitran import (
 )
 
 # from radis.io.hitran import hit2dfTAB
+from radis.misc.cache_files import cache_file_name
 from radis.misc.warning import EmptyDatabaseError
 from radis.io.query import fetch_astroquery
 from radis.io.tools import drop_object_format_columns, replace_PQR_with_m101
@@ -100,8 +101,8 @@ from six import string_types
 from radis.misc.warning import warn, default_warning_status
 from warnings import catch_warnings, filterwarnings
 import numpy as np
+
 from time import time
-import gc
 from uuid import uuid1
 from six.moves import range
 from radis.misc.utils import get_files_from_regex
@@ -1293,6 +1294,19 @@ class DatabankLoader(object):
         if isinstance(path, string_types):  # make it a list
             path = get_files_from_regex(path)
 
+            # Ensure that `path` does not contain the cached dataset files in
+            # case a wildcard input is given by the user. For instance, if the
+            # given input is "cdsd_hitemp_09_frag*", path should not contain both
+            # "cdsd_hitemp_09_fragment.txt" and "cdsd_hitemp_09_fragment.h5".
+
+            # Reference: https://github.com/radis/radis/issues/121
+
+            filtered_path = [fname for fname in path]
+            for fname in path:
+                if cache_file_name(fname) in path and cache_file_name(fname) != fname:
+                    filtered_path.remove(cache_file_name(fname))
+            path = filtered_path
+
         if dbformat not in KNOWN_DBFORMAT:
             # >>>>>>>>>>>
             # Deprecation errors (added in 0.9.21. Remove after 1.0.0)
@@ -1786,6 +1800,7 @@ class DatabankLoader(object):
                 raise (
                     FileNotFoundError("Could not find npy dataset in given directory")
                 )
+
         if drop_columns == "auto":
             drop_columns = (
                 drop_auto_columns_for_dbformat[dbformat]
@@ -1795,15 +1810,33 @@ class DatabankLoader(object):
         # subroutine load_and_concat
         # --------------------------------------
         def load_and_concat(files, buffer):
-            """ Two modes of storage: either directly in ``'RAM'`` mode, or in ``'h5'``
-            mode. ``'RAM'`` is faster but memory hunger, ``'h5'`` handles better
+            """ Two modes of concatenation: either directly in memory in ``'RAM'`` mode, 
+            or aggregate on disk in a large HDF5 file in ``'h5'`` mode. 
+            ``'RAM'`` is faster but memory hunger, ``'h5'`` handles better
             a bigger database
 
             Parameters
             ----------
 
-            files: str
-                path
+            files: list of str, or list of dict
+                either a list of path to database files ::
+                    
+                    [PATH/TO/01_1000-1150_HITEMP2010.par, 
+                     PATH/TO/01_1150-1300_HITEMP2010.par, 
+                     PATH/TO/01_1300-1500_HITEMP2010.par]
+
+                either a list of dictionaries containing the spectral informations ::
+                    
+                    [{'wav':'PATH/TO/v0.npy', 
+                      'int':'PATH/TO/int.npy',
+                      'Pshft':'PATH/TO/int.npy',
+                      'log_2gs':'PATH/TO/log_2gs.npy'
+                      'Tdpair':'PATH/TO/Tdpair.npy',
+                      'El':'PATH/TO/Tdpair.npy'},
+                     # other dictionaries if needed
+                      ]
+                    
+                See definitions for instance in :py:data:`~radis.io.hitran.column_2004`
 
             buffer: ``'direct'``, ``'h5'``, ``'RAM'``
                 see _load_databank info
@@ -1826,10 +1859,8 @@ class DatabankLoader(object):
                 if __debug__:
                     printdbg("Loading {0}/{1}".format(i + 1, len(files)))
 
-                if i % 31 == 30:
-                    gc.collect()  # force garbage collection as we may be generating tons of data
-
-                if db_assumed_sorted:
+                if db_assumed_sorted and len(files) > 1:
+                    # no need to check the first file if there is only one file anyway
                     # Note on performance: reading the first line of .txt file is still
                     # much faster than reading the whole hdf5 file
                     if dbformat == "cdsd-hitemp":
@@ -1882,6 +1913,11 @@ class DatabankLoader(object):
                                     )
                                 )
                             continue
+
+                    # elif dbformat == "npy":
+                    #     pass
+                    #     # check of 1st line not implemented. TODO if necessary.
+
                     else:
                         raise ValueError(
                             "The database format is unknown: {0}".format(dbformat)
@@ -1912,6 +1948,11 @@ class DatabankLoader(object):
                         verbose=verbose,
                         drop_non_numeric=True,
                     )
+                # elif dbformat == "npy":
+                #
+                #     df = npy2df(filename, verbose=verbose)
+                #     # path like : {'v0': path to v0.npy, 'da': path to da.npy}
+
                 else:
                     raise ValueError("Unknown dbformat: {0}".format(dbformat))
 

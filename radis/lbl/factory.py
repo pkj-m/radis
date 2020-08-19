@@ -104,9 +104,9 @@ from multiprocessing import cpu_count
 from time import time
 import numpy as np
 import astropy.units as u
+import math
 import sys
 from subprocess import call
-
 
 # %% Main functions
 class SpectrumFactory(BandFactory):
@@ -846,7 +846,56 @@ class SpectrumFactory(BandFactory):
     def eq_spectrum_gpu(
         self, Tgas, mole_fraction=None, path_length=None, pressure=None, name=None
     ):
+        """ Generate a spectrum at equilibrium with calculation of lineshapes and broadening done on the GPU
 
+                Parameters
+                ----------
+
+                Tgas: float
+                    Gas temperature (K)
+
+                mole_fraction: float
+                    database species mole fraction. If None, Factory mole fraction is used.
+
+                path_length: float
+                    slab size (cm). If None, Factory mole fraction is used.
+
+                pressure: float
+                    pressure (bar). If None, the default Factory pressure is used.
+
+                name: str
+                    case name (useful in batch)
+
+                Returns
+                -------
+
+                s : Spectrum
+                    Returns a :class:`~radis.spectrum.spectrum.Spectrum` object
+
+                Use the :meth:`~radis.spectrum.spectrum.Spectrum.get` method to get something
+                among ``['radiance', 'radiance_noslit', 'absorbance', etc...]``
+
+                Or directly the :meth:`~radis.spectrum.spectrum.Spectrum.plot` method
+                to plot it. See [1]_ to get an overview of all Spectrum methods
+
+                Notes
+                -----
+
+                This method will compile the
+
+
+                References
+                ----------
+
+                .. [1] RADIS PR: `Spectrum how to? <https://radis.readthedocs.io/en/latest/spectrum/spectrum.html#label-spectrum>`__
+
+
+                See Also
+                --------
+
+                :meth:`~radis.lbl.factory.SpectrumFactory.eq_spectrum`
+
+                """
         try:
 
             # %% Preprocessing
@@ -984,6 +1033,11 @@ class SpectrumFactory(BandFactory):
             abscoeff = py_cuffs.iterate(
                 pressure, Tgas, mole_fraction, Ia_arr, molarmass_arr, Q_arr
             )
+            py_cuffs.init(v_arr, NwG, NwL, v0, da, log_2gs, na, log_2vMm, S0, El)
+            print("done!")
+            wavenumber = v_arr
+            print("Calculating spectra...", end=" ")
+            abscoeff = py_cuffs.iterate(pressure, Tgas) * math.log(10)
             print("done!")
             # Calculate output quantities
             # ----------------------------------------------------------------------
