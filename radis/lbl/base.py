@@ -73,7 +73,7 @@ from radis.db.molparam import MolParams
 from radis.lbl.loader import DatabankLoader, KNOWN_LVLFORMAT, df_metadata
 from radis.lbl.labels import vib_lvl_name_hitran_class1, vib_lvl_name_hitran_class5
 from radis.phys.constants import c_CGS, h_CGS
-from radis.phys.convert import cm2J, cm2nm, nm2cm, nm_air2cm
+from radis.phys.convert import cm2J, nm2cm, nm_air2cm
 from radis.phys.constants import hc_k
 from radis.misc.basics import all_in, transfer_metadata
 from radis.misc.debug import printdbg
@@ -85,7 +85,6 @@ from radis.misc.utils import Default
 # TODO: rename in get_molecule_name
 from radis.io.hitran import get_molecule, get_molecule_identifier
 from radis.spectrum.utils import print_conditions
-from radis.phys.air import air2vacuum, vacuum2air
 from radis.phys.units_astropy import convert_and_strip_units
 from numpy import exp, pi
 import numpy as np
@@ -2757,16 +2756,6 @@ class BaseFactory(DatabankLoader):
         id_set = df.id.unique()
         iso_set = self._get_isotope_list()  # df1.iso.unique()
 
-        def get_parsum(molecule, iso, state):
-            """ Get function that calculates the partition function. 
-            By default, try to get the tabulated version. If does not exist, 
-            returns the direct summation version
-            """
-            try:
-                return self.get_partition_function_interpolator(molecule, iso, state)
-            except KeyError:
-                return self.get_partition_function_calculator(molecule, iso, state)
-
         # TODO for multi-molecule code: add above line in the loop
         if len(id_set) == 1 and len(iso_set) == 1:
 
@@ -2776,7 +2765,7 @@ class BaseFactory(DatabankLoader):
 
             molecule = get_molecule(id_set[0])
             state = self.input.state
-            parsum = get_parsum(molecule, iso_set[0], state)  # partition function
+            parsum = self._get_parsum(molecule, iso_set[0], state)  # partition function
             df.Qref = parsum.at(
                 Tref, update_populations=False
             )  # stored as attribute, not column
@@ -2793,7 +2782,7 @@ class BaseFactory(DatabankLoader):
             for (id, iso), idx in dgb.indices.items():
                 molecule = get_molecule(id)
                 state = self.input.state
-                parsum = get_parsum(molecule, iso, state)
+                parsum = self._get_parsum(molecule, iso, state)
                 df.at[idx, "Qref"] = parsum.at(Tref, update_populations=False)
 
                 if radis.DEBUG_MODE:
@@ -3168,6 +3157,16 @@ class BaseFactory(DatabankLoader):
         # ... initialization)
         assert self._wstep == self.params.wstep
         assert self._broadening_max_width == self.params.broadening_max_width
+
+    def _get_parsum(self, molecule, iso, state):
+        """ Get function that calculates the partition function.
+        By default, try to get the tabulated version. If does not exist,
+        returns the direct summation version
+        """
+        try:
+            return self.get_partition_function_interpolator(molecule, iso, state)
+        except KeyError:
+            return self.get_partition_function_calculator(molecule, iso, state)
 
     def plot_populations(self, what="vib", isotope=None, nfig=None):
         """ Plot populations currently calculated in factory.
